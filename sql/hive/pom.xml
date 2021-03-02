@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.spark</groupId>
     <artifactId>spark-parent_2.12</artifactId>
-    <version>3.2.1</version>
+    <version>3.2.1.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -121,14 +121,29 @@
       <scope>${hive.shims.scope}</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hive</groupId>
+      <groupId>${hive.group}</groupId>
       <artifactId>hive-llap-common</artifactId>
       <scope>${hive.llap.scope}</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hive</groupId>
+      <groupId>${hive.group}</groupId>
       <artifactId>hive-llap-client</artifactId>
       <scope>${hive.llap.scope}</scope>
+    </dependency>
+    <dependency>
+      <groupId>${hive.group}</groupId>
+      <artifactId>hops-jdbc</artifactId>
+      <scope>${hive.jdbc.scope}</scope>
+    </dependency>
+    <dependency>
+      <groupId>${hive.group}</groupId>
+      <artifactId>hive-service-rpc</artifactId>
+      <scope>${hive.service.scope}</scope>
+    </dependency>
+    <dependency>
+      <groupId>${hive.group}</groupId>
+      <artifactId>hive-service</artifactId>
+      <scope>${hive.service.scope}</scope>
     </dependency>
     <!-- hive-serde already depends on avro, but this brings in customized config of avro deps from parent -->
     <dependency>
@@ -169,7 +184,7 @@
       <artifactId>datanucleus-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>${hadoop-client-runtime.artifact}</artifactId>
       <scope>${hadoop.deps.scope}</scope>
     </dependency>

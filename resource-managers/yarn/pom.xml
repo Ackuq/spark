@@ -20,7 +20,7 @@
   <parent>
     <groupId>org.apache.spark</groupId>
     <artifactId>spark-parent_2.12</artifactId>
-    <version>3.2.1</version>
+    <version>3.2.1.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -37,23 +37,23 @@
       <id>hadoop-2.7</id>
       <dependencies>
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-yarn-api</artifactId>
         </dependency>
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-yarn-common</artifactId>
         </dependency>
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-yarn-server-web-proxy</artifactId>
         </dependency>
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-yarn-client</artifactId>
         </dependency>
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-yarn-server-tests</artifactId>
           <classifier>tests</classifier>
           <scope>test</scope>
@@ -63,7 +63,7 @@
           See the parent pom.xml for more details.
         -->
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
           <scope>test</scope>
         </dependency>
@@ -76,13 +76,13 @@
       </activation>
       <dependencies>
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>${hadoop-client-runtime.artifact}</artifactId>
           <version>${hadoop.version}</version>
           <scope>${hadoop.deps.scope}</scope>
         </dependency>
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>${hadoop-client-minicluster.artifact}</artifactId>
           <version>${hadoop.version}</version>
           <scope>test</scope>
@@ -128,9 +128,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>${hadoop-client-api.artifact}</artifactId>
-      <version>${hadoop.version}</version>
+      <scope>${hadoop.deps.scope}</scope>
     </dependency>
 
     <!-- Explicit listing of transitive deps that are shaded. Otherwise, odd compiler crashes. -->
