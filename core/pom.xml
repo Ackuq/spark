@@ -21,7 +21,7 @@
   <parent>
     <groupId>org.apache.spark</groupId>
     <artifactId>spark-parent_2.12</artifactId>
-    <version>3.2.2-SNAPSHOT</version>
+    <version>3.2.2.0</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -68,12 +68,12 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>${hadoop-client-api.artifact}</artifactId>
-      <version>${hadoop.version}</version>
+      <scope>${hadoop.deps.scope}</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>${hadoop-client-runtime.artifact}</artifactId>
-      <version>${hadoop.version}</version>
+      <scope>${hadoop.deps.scope}</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
@@ -415,7 +415,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>hadoop-minikdc</artifactId>
       <scope>test</scope>
     </dependency>
@@ -467,13 +467,13 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>hadoop-aws</artifactId>
       <version>${hadoop.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
         <exclusion>

@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.spark</groupId>
     <artifactId>spark-parent_2.12</artifactId>
-    <version>3.2.2-SNAPSHOT</version>
+    <version>3.2.2.0</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -57,7 +57,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>${hadoop-client-api.artifact}</artifactId>
       <version>${hadoop.version}</version>
       <scope>provided</scope>
@@ -72,13 +72,13 @@
       intra-jackson-module version problems.
       -->
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>hadoop-aws</artifactId>
       <version>${hadoop.version}</version>
       <scope>${hadoop.deps.scope}</scope>
       <exclusions>
         <exclusion>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
         <exclusion>
@@ -113,13 +113,13 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>hadoop-openstack</artifactId>
       <version>${hadoop.version}</version>
       <scope>${hadoop.deps.scope}</scope>
       <exclusions>
         <exclusion>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
         <exclusion>
@@ -175,13 +175,13 @@
       <scope>${hadoop.deps.scope}</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>hadoop-azure</artifactId>
       <version>${hadoop.version}</version>
       <scope>${hadoop.deps.scope}</scope>
       <exclusions>
         <exclusion>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
         <exclusion>
@@ -262,13 +262,13 @@
         but it still needs some selective exclusion across versions, especially 3.0.x.
         -->
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>${hadoop.group}</groupId>
           <artifactId>hadoop-cloud-storage</artifactId>
           <version>${hadoop.version}</version>
           <scope>${hadoop.deps.scope}</scope>
           <exclusions>
             <exclusion>
-              <groupId>org.apache.hadoop</groupId>
+              <groupId>${hadoop.group}</groupId>
               <artifactId>hadoop-common</artifactId>
             </exclusion>
             <exclusion>
