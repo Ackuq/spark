@@ -95,7 +95,8 @@ private[hive] object IsolatedClientLoader extends Logging {
   }
 
   def hiveVersion(version: String): HiveVersion = {
-    VersionUtils.majorMinorPatchVersion(version).flatMap {
+    // Fabio: Remove the last digit of the version string as it's the Hopsworks specific version
+    VersionUtils.majorMinorPatchVersion(version.substring(0, version.lastIndexOf("."))).flatMap {
       case (12, _, _) | (0, 12, _) => Some(hive.v12)
       case (13, _, _) | (0, 13, _) => Some(hive.v13)
       case (14, _, _) | (0, 14, _) => Some(hive.v14)
