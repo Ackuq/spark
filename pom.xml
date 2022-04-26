@@ -118,17 +118,10 @@
     <maven.version>3.8.4</maven.version>
     <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
     <sbt.project.name>spark</sbt.project.name>
-<<<<<<< HEAD
     <slf4j.version>1.7.32</slf4j.version>
     <log4j.version>2.17.2</log4j.version>
-    <!-- make sure to update IsolatedClientLoader whenever this version is changed -->
-    <hadoop.version>3.3.2</hadoop.version>
-=======
-    <slf4j.version>1.7.30</slf4j.version>
-    <log4j.version>1.2.17</log4j.version>
     <hadoop.version>3.2.0.2</hadoop.version>
     <hadoop.group>io.hops</hadoop.group>
->>>>>>> cafa71eb6a (Hopsify Spark 3.1 release)
     <protobuf.version>2.5.0</protobuf.version>
     <yarn.version>${hadoop.version}</yarn.version>
     <zookeeper.version>3.6.2</zookeeper.version>
@@ -136,13 +129,8 @@
     <hive.group>io.hops.hive</hive.group>
     <hive.classifier>core</hive.classifier>
     <!-- Version used in Maven Hive dependency -->
-<<<<<<< HEAD
-    <hive.version>2.3.9</hive.version>
-    <hive23.version>2.3.9</hive23.version>
-=======
     <hive.version>3.0.0.8-SNAPSHOT</hive.version>
     <hive23.version>3.0.0.8-SNAPSHOT</hive23.version>
->>>>>>> cafa71eb6a (Hopsify Spark 3.1 release)
     <!-- Version used for internal directory structure -->
     <hive.version.short>3.0</hive.version.short>
     <!-- note that this should be compatible with Kafka brokers version 0.10 and up -->
