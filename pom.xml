@@ -1123,19 +1123,19 @@
       </dependency>
       <!-- Hadoop 3.x dependencies -->
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>${hadoop.group}</groupId>
         <artifactId>${hadoop-client-api.artifact}</artifactId>
         <version>${hadoop.version}</version>
         <scope>${hadoop.deps.scope}</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>${hadoop.group}</groupId>
         <artifactId>${hadoop-client-runtime.artifact}</artifactId>
         <version>${hadoop.version}</version>
         <scope>${hadoop.deps.scope}</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>${hadoop.group}</groupId>
         <artifactId>${hadoop-client-minicluster.artifact}</artifactId>
         <version>${yarn.version}</version>
         <scope>test</scope>
@@ -1465,15 +1465,15 @@
         <scope>${hadoop.deps.scope}</scope>
         <exclusions>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-yarn-server-common</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-yarn-common</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-yarn-api</artifactId>
           </exclusion>
           <exclusion>
@@ -1752,11 +1752,11 @@
             <artifactId>ant</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-common</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-auth</artifactId>
           </exclusion>
           <exclusion>
@@ -2342,11 +2342,11 @@
             <artifactId>jaxb-api</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-common</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-hdfs</artifactId>
           </exclusion>
           <exclusion>
@@ -2362,11 +2362,11 @@
         <scope>${orc.deps.scope}</scope>
         <exclusions>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-common</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>${hadoop.group}</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
           </exclusion>
           <exclusion>

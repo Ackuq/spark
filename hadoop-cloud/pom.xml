@@ -63,7 +63,7 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>${hadoop.group}</groupId>
       <artifactId>${hadoop-client-runtime.artifact}</artifactId>
       <version>${hadoop.version}</version>
     </dependency>
