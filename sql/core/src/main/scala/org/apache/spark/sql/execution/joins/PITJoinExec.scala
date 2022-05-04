@@ -75,10 +75,13 @@ case class PITJoinExec(
     super.stringArgs.toSeq.dropRight(1).iterator
 
   override def requiredChildDistribution: Seq[Distribution] = {
-
+    if (leftEquiKeys.isEmpty || rightEquiKeys.isEmpty) {
+      UnspecifiedDistribution :: UnspecifiedDistribution :: Nil
+    } else {
       HashClusteredDistribution(leftEquiKeys) :: HashClusteredDistribution(
         rightEquiKeys
       ) :: Nil
+    }
   }
 
   override def outputOrdering: Seq[SortOrder] = {
@@ -264,7 +267,7 @@ case class PITJoinExec(
     val toleranceCheck =
       leftPIT.zip(rightPIT).zipWithIndex.map { case ((l, r), i) =>
         s"""
-           | (${l.value} - ${r.value} > ${tolerance})
+           | (${l.value} - ${r.value} > $tolerance)
            |""".stripMargin
       }
     toleranceCheck.mkString(" && ")
@@ -365,7 +368,7 @@ case class PITJoinExec(
   ): Seq[ExprCode] = {
     ctx.INPUT_ROW = rightRow
     right.output.zipWithIndex.map { case (a, i) =>
-      val ev = BoundReference(i, a.dataType, a.nullable).genCode(ctx);
+      val ev = BoundReference(i, a.dataType, a.nullable).genCode(ctx)
       if (returnNulls) {
         val isNull = ctx.freshName("isNull")
         val value = ctx.freshName("value")
@@ -408,18 +411,16 @@ case class PITJoinExec(
     // Create variables fro join keys
     val (leftPITKeyVars, leftEquiKeyVars) =
       createJoinKeys(ctx, leftRow, leftPitKeys, leftEquiKeys, left.output)
-    val (leftPITAnyNull, leftEquiAnyNull) = (
-      leftPITKeyVars.map(_.isNull).mkString(" || "),
-      leftEquiKeyVars.map(_.isNull).mkString(" || ")
-    )
+    val leftAnyNull =
+      (leftPITKeyVars.map(_.isNull) ++ leftEquiKeyVars.map(_.isNull))
+        .mkString(" || ")
 
     val (rightPITKeyTmpVars, rightEquiKeyTmpVars) =
       createJoinKeys(ctx, rightRow, rightPitKeys, rightEquiKeys, right.output)
+    val rightAnyNull =
+      (rightPITKeyTmpVars.map(_.isNull) ++ rightEquiKeyTmpVars.map(_.isNull))
+        .mkString(" || ")
 
-    val (rightPITAnyNull, rightEquiAnyNull) = (
-      rightPITKeyTmpVars.map(_.isNull).mkString(" || "),
-      rightEquiKeyTmpVars.map(_.isNull).mkString(" || ")
-    )
     // Copy the right key as class members so they could be used in next function call.
     val rightPITKeyVars = copyKeys(ctx, rightPITKeyTmpVars)
     val rightEquiKeyVars = copyKeys(ctx, rightEquiKeyTmpVars)
@@ -445,7 +446,7 @@ case class PITJoinExec(
          |    $leftRow = (InternalRow) leftIter.next();
          |    ${leftPITKeyVars.map(_.code).mkString("\n")}
          |    ${leftEquiKeyVars.map(_.code).mkString("\n")}
-         |    if($leftPITAnyNull|| $leftEquiAnyNull) {
+         |    if($leftAnyNull) {
          |      $leftRow = null;
          |      continue;
          |    }
@@ -457,7 +458,7 @@ case class PITJoinExec(
          |        $rightRow = (InternalRow) rightIter.next();
          |        ${rightPITKeyTmpVars.map(_.code).mkString("\n")}
          |        ${rightEquiKeyTmpVars.map(_.code).mkString("\n")}
-         |        if ($rightPITAnyNull|| $rightEquiAnyNull) {
+         |        if ($rightAnyNull) {
          |          $rightRow = null;
          |          continue;
          |        }
@@ -591,36 +592,34 @@ case class PITJoinExec(
 
     val thisPlan = ctx.addReferenceObj("plan", this)
     val eagerCleanup = s"$thisPlan.cleanupResources();"
-    returnNulls match {
-      case false => s"""
-                       |while (findNextInnerJoinRows($leftInput, $rightInput)) {
-                       |  ${leftVarDecl.mkString("\n")}
-                       |  ${beforeLoop.trim}
-                       |  InternalRow $rightRow = (InternalRow) $matched;
-                       |  ${condCheck.trim}
-                       |  $numOutput.add(1);
-                       |  ${consume(ctx, leftVars ++ rightVars)}
-                       |  if (shouldStop()) return;
-                       |}
-                       |$eagerCleanup
-                       |""".stripMargin
-      case true =>
-        s"""
-           |while($leftInput.hasNext()) {
-           |  findNextInnerJoinRows($leftInput, $rightInput);
-           |  ${leftVarDecl.mkString("\n")}
-           |  ${beforeLoop.trim}
-           |  InternalRow $rightRow = (InternalRow) $matched;
-           |  ${condCheck.trim}
-           |  $numOutput.add(1);
-           |  ${consume(ctx, leftVars ++ rightVars)};
-           |  if (shouldStop()) return;
-           |}
-           |""".stripMargin
+    if(returnNulls) {
+      s"""
+         |while($leftInput.hasNext()) {
+         |  findNextInnerJoinRows($leftInput, $rightInput);
+         |  ${leftVarDecl.mkString("\n")}
+         |  ${beforeLoop.trim}
+         |  InternalRow $rightRow = (InternalRow) $matched;
+         |  ${condCheck.trim}
+         |  $numOutput.add(1);
+         |  ${consume(ctx, leftVars ++ rightVars)};
+         |  if (shouldStop()) return;
+         |}
+         |""".stripMargin
+    } else {
+      s"""
+         |while (findNextInnerJoinRows($leftInput, $rightInput)) {
+         |  ${leftVarDecl.mkString("\n")}
+         |  ${beforeLoop.trim}
+         |  InternalRow $rightRow = (InternalRow) $matched;
+         |  ${condCheck.trim}
+         |  $numOutput.add(1);
+         |  ${consume(ctx, leftVars ++ rightVars)}
+         |  if (shouldStop()) return;
+         |}
+         |$eagerCleanup
+         |""".stripMargin
     }
   }
-
-
 }
 
 /**

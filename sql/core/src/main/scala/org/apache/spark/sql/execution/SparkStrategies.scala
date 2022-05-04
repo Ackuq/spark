@@ -321,9 +321,9 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       ) =>
         if (
           // TODO: Add ability for non-equi conditions and using no equiality condition
-          nonEquiCond.isEmpty && leftEquiKeys.nonEmpty && RowOrdering.isOrderable(
+          nonEquiCond.isEmpty && (leftEquiKeys.isEmpty || RowOrdering.isOrderable(
             leftEquiKeys
-          ) && RowOrdering.isOrderable(Seq(leftPitKey))
+          )) && RowOrdering.isOrderable(Seq(leftPitKey))
         ) {
           Seq(
             PITJoinExec(
@@ -581,7 +581,8 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
     }
   }
 
-  protected lazy val singleRowRdd = session.sparkContext.parallelize(Seq(InternalRow()), 1)
+  protected lazy val singleRowRdd: RDD[InternalRow] =
+    session.sparkContext.parallelize(Seq(InternalRow()), 1)
 
   object InMemoryScans extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
