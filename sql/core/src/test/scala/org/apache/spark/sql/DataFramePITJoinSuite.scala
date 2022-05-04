@@ -29,9 +29,9 @@ class DataFramePITJoinSuite extends QueryTest
 
   def prepareForPITJoin(): (DataFrame, DataFrame) = {
     val schema1 = StructType(
-      StructField("a", IntegerType, false) ::
-        StructField("b", StringType, false) ::
-        StructField("left_val", StringType, false) :: Nil)
+      StructField("a", IntegerType, nullable = false) ::
+        StructField("b", StringType, nullable = false) ::
+        StructField("left_val", StringType, nullable = false) :: Nil)
     val rowSeq1: List[Row] = List(Row(1, "x", "a"), Row(5, "y", "b"), Row(10, "z", "c"))
     val df1 = spark.createDataFrame(rowSeq1.asJava, schema1)
 
@@ -44,6 +44,19 @@ class DataFramePITJoinSuite extends QueryTest
     val df2 = spark.createDataFrame(rowSeq2.asJava, schema2)
 
     (df1, df2)
+  }
+
+  test("PIT join - simple") {
+    val (df1, df2) = prepareForPITJoin()
+    checkAnswer(
+      df1.pitJoin(
+        df2, df1.col("a"), df2.col("a")),
+      Seq(
+        Row(1, "x", "a", 1, "v", 1),
+        Row(5, "y", "b", 3, "x", 3),
+        Row(10, "z", "c", 7, "z", 7)
+      )
+    )
   }
 
   test("PIT join - with ID") {
@@ -60,11 +73,11 @@ class DataFramePITJoinSuite extends QueryTest
     )
   }
 
-  test("as-of join - usingColumns, left outer") {
+  test("PIT join - usingColumns, left outer") {
     val (df1, df2) = prepareForPITJoin()
     checkAnswer(
       df1.pitJoin(df2, df1.col("a"), df2.col("a"), df1("b") === df2("b"),
-        true),
+        returnNulls = true),
       Seq(
         Row(1, "x", "a", null, null, null),
         Row(5, "y", "b", null, null, null),
@@ -73,11 +86,10 @@ class DataFramePITJoinSuite extends QueryTest
     )
   }
 
-  test("as-of join - tolerance = 1") {
+  test("PIT join - tolerance = 1") {
     val (df1, df2) = prepareForPITJoin()
     checkAnswer(
-      df1.pitJoin(df2, df1.col("a"), df2.col("a"), df1("b") === df2("b"),
-        false, tolerance = 1),
+      df1.pitJoin(df2, df1.col("a"), df2.col("a"), tolerance = 1),
       Seq(
         Row(1, "x", "a", 1, "v", 1)
       )

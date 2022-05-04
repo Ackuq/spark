@@ -13,8 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Modifications copyright (C) 2022 Axel Pettersson
  */
 
 package org.apache.spark.sql.execution.joins
@@ -42,7 +40,7 @@ case class PITJoinExec(
     condition: Option[Expression],
     left: SparkPlan,
     right: SparkPlan,
-    tolerance: Long,
+    tolerance: Long
 ) extends ShuffledJoin
     with CodegenSupport {
 
@@ -91,15 +89,16 @@ case class PITJoinExec(
 
   override def leftKeys: Seq[Expression] = leftEquiKeys ++ leftPitKeys
 
-  /** The utility method to get output ordering for left or right side of the
-    * join.
-    *
-    * Returns the required ordering for left or right child if
-    * childOutputOrdering does not satisfy the required ordering; otherwise,
-    * which means the child does not need to be sorted again, returns the
-    * required ordering for this child with extra "sameOrderExpressions" from
-    * the child's outputOrdering.
-    */
+  /**
+   * The utility method to get output ordering for left or right side of the
+   * join.
+   *
+   * Returns the required ordering for left or right child if
+   * childOutputOrdering does not satisfy the required ordering; otherwise,
+   * which means the child does not need to be sorted again, returns the
+   * required ordering for this child with extra "sameOrderExpressions" from
+   * the child's outputOrdering.
+   */
   private def getKeyOrdering(
       keys: Seq[Expression],
       childOutputOrdering: Seq[SortOrder]
@@ -214,8 +213,9 @@ case class PITJoinExec(
     }
   }
 
-  /** These generator are for generating for the equi-keys
-    */
+  /**
+   * These generator are for generating for the equi-keys
+   */
 
   private def createLeftEquiKeyGenerator(): Projection =
     UnsafeProjection.create(leftEquiKeys, left.output)
@@ -223,8 +223,9 @@ case class PITJoinExec(
   private def createRightEquiKeyGenerator(): Projection =
     UnsafeProjection.create(rightEquiKeys, right.output)
 
-  /** These generator are for generating the PIT keys
-    */
+  /**
+   * These generator are for generating the PIT keys
+   */
 
   private def createLeftPITKeyGenerator(): Projection = {
     UnsafeProjection.create(leftPitKeys, left.output)
@@ -238,10 +239,11 @@ case class PITJoinExec(
 
   private def copyKeys(
       ctx: CodegenContext,
-      vars: Seq[ExprCode]
+      vars: Seq[ExprCode],
+      keys: Seq[Expression]
   ): Seq[ExprCode] = {
     vars.zipWithIndex.map { case (ev, i) =>
-      ctx.addBufferedState(leftKeys(i).dataType, "value", ev.value)
+      ctx.addBufferedState(keys(i).dataType, "value", ev.value)
     }
   }
 
@@ -312,12 +314,13 @@ case class PITJoinExec(
      """.stripMargin
   }
 
-  /** Creates variables and declarations for left part of result row.
-    *
-    * In order to defer the access after condition and also only access once in
-    * the loop, the variables should be declared separately from accessing the
-    * columns, we can't use the codegen of BoundReference here.
-    */
+  /**
+   * Creates variables and declarations for left part of result row.
+   *
+   * In order to defer the access after condition and also only access once in
+   * the loop, the variables should be declared separately from accessing the
+   * columns, we can't use the codegen of BoundReference here.
+   */
   private def createLeftVars(
       ctx: CodegenContext,
       leftRow: String
@@ -359,7 +362,8 @@ case class PITJoinExec(
     }.unzip
   }
 
-  /** Creates the variables for right part of result row, using BoundReference,
+  /**
+   * Creates the variables for right part of result row, using BoundReference,
     * since the right part are accessed inside the loop.
     */
   private def createRightVar(
@@ -396,10 +400,11 @@ case class PITJoinExec(
     }
   }
 
-  /** Generate a function to scan both left and right to find a match, returns
-    * the term for matched one row from left side and buffered rows from right
-    * side.
-    */
+  /**
+   * Generate a function to scan both left and right to find a match, returns
+   * the term for matched one row from left side and buffered rows from right
+   * side.
+   */
   private def genScanner(ctx: CodegenContext) = {
     // Create class member for next row from both sides.
     // Inline mutable state since not many join operations in a task
@@ -422,14 +427,14 @@ case class PITJoinExec(
         .mkString(" || ")
 
     // Copy the right key as class members so they could be used in next function call.
-    val rightPITKeyVars = copyKeys(ctx, rightPITKeyTmpVars)
-    val rightEquiKeyVars = copyKeys(ctx, rightEquiKeyTmpVars)
+    val rightPITKeyVars = copyKeys(ctx, rightPITKeyTmpVars, leftPitKeys)
+    val rightEquiKeyVars = copyKeys(ctx, rightEquiKeyTmpVars, leftEquiKeys)
 
     val matched =
       ctx.addMutableState("InternalRow", "matched", forceInline = true)
 
-    val matchedPITKeyVars = copyKeys(ctx, leftPITKeyVars)
-    val matchedEquiKeyVars = copyKeys(ctx, leftEquiKeyVars)
+    val matchedPITKeyVars = copyKeys(ctx, leftPITKeyVars, leftPitKeys)
+    val matchedEquiKeyVars = copyKeys(ctx, leftEquiKeyVars, leftEquiKeys)
 
     ctx.addNewFunction(
       "findNextInnerJoinRows",
@@ -437,7 +442,7 @@ case class PITJoinExec(
          |private boolean findNextInnerJoinRows(
          |scala.collection.Iterator leftIter,
          |scala.collection.Iterator rightIter
-         |){
+         |) {
          |  $leftRow = null;
          |  int equiComp = 0;
          |  int pitComp = 0;
@@ -505,14 +510,15 @@ case class PITJoinExec(
     (leftRow, matched)
   }
 
-  /** Splits variables based on whether it's used by condition or not, returns
-    * the code to create these variables before the condition and after the
-    * condition.
-    *
-    * Only a few columns are used by condition, then we can skip the accessing
-    * of those columns that are not used by condition also filtered out by
-    * condition.
-    */
+  /**
+   * Splits variables based on whether it's used by condition or not, returns
+   * the code to create these variables before the condition and after the
+   * condition.
+   *
+   * Only a few columns are used by condition, then we can skip the accessing
+   * of those columns that are not used by condition also filtered out by
+   * condition.
+   */
   private def splitVarsByCondition(
       attributes: Seq[Attribute],
       variables: Seq[ExprCode]
@@ -679,13 +685,16 @@ private[joins] class PITJoinScanner(
   private[this] var bufferedRowEquiKey: InternalRow = _
   private[this] var bufferedRowPITKey: InternalRow = _
 
-  /** The join key for the rows buffered in `bufferedMatches`, or null if
-    * `bufferedMatches` is empty
-    */
+  /**
+   * The join key for the rows buffered in `bufferedMatches`, or null if
+   * `bufferedMatches` is empty
+   */
   private[this] var matchJoinEquiKey: InternalRow = _
   private[this] var matchJoinPITKey: InternalRow = _
 
-  /** Contains the current match */
+  /**
+   * Contains the current match
+   */
   private[this] var bufferedMatch: UnsafeRow = _
 
   // Initialization (note: do _not_ want to advance streamed here).
@@ -697,15 +706,16 @@ private[joins] class PITJoinScanner(
 
   def getBufferedMatch: UnsafeRow = bufferedMatch
 
-  /** Advances both input iterators, stopping when we have found rows with
-    * matching join keys. If no join rows found, try to do the eager resources
-    * cleanup.
-    *
-    * @return
-    *   true if matching rows have been found and false otherwise. If this
-    *   returns true, then [[getStreamedRow]] can be called to construct the
-    *   joinresults.
-    */
+  /**
+   * Advances both input iterators, stopping when we have found rows with
+   * matching join keys. If no join rows found, try to do the eager resources
+   * cleanup.
+   *
+   * @return
+   * true if matching rows have been found and false otherwise. If this
+   * returns true, then [[getStreamedRow]] can be called to construct the
+   * joinresults.
+   */
   final def findNextInnerJoinRows(): Boolean = {
     while (
       advancedStreamed() && streamedRowEquiKey.anyNull && streamedRowPITKey.anyNull
@@ -798,11 +808,12 @@ private[joins] class PITJoinScanner(
 
   // --- Private methods --------------------------------------------------------------------------
 
-  /** Advance the streamed iterator and compute the new row's join key.
-    *
-    * @return
-    *   true if the streamed iterator returned a row and false otherwise.
-    */
+  /**
+   * Advance the streamed iterator and compute the new row's join key.
+   *
+   * @return
+   * true if the streamed iterator returned a row and false otherwise.
+   */
   private def advancedStreamed(): Boolean = {
     if (streamedIter.advanceNext()) {
       streamedRow = streamedIter.getRow
@@ -817,11 +828,12 @@ private[joins] class PITJoinScanner(
     }
   }
 
-  /** Advance the buffered iterator until we find a row with join key
-    *
-    * @return
-    *   true if the buffered iterator returned a row and false otherwise.
-    */
+  /**
+   * Advance the buffered iterator until we find a row with join key
+   *
+   * @return
+   * true if the buffered iterator returned a row and false otherwise.
+   */
   private def advancedBuffered(): Boolean = {
     if (bufferedIter.advanceNext()) {
       bufferedRow = bufferedIter.getRow

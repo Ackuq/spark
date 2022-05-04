@@ -1024,15 +1024,33 @@ class Dataset[T] private[sql](
   /**
    * PIT Join
    */
-  def pitJoin(right: Dataset[_], leftTS: Column, rightTS: Column, joinExprs: Column,
-              returnNulls: Boolean = false, tolerance: Long = 0): DataFrame = {
-    withPlan {
+  def pitJoin(
+     right: Dataset[_],
+     leftTS: Column,
+     rightTS: Column,
+     joinExprs: Column = null,
+     returnNulls: Boolean = false,
+     tolerance: Long = 0
+   ): DataFrame = {
+
+    // Analyze the self join. The assumption is that the analyzer will disambiguate left vs right
+    // by creating a new instance for one of the branch.
+    val joined = sparkSession.sessionState.executePlan(
       PITJoin(
         logicalPlan, right.logicalPlan,
         leftTS.expr, rightTS.expr,
-        Some(joinExprs.expr),
+        if (joinExprs == null) None else Some(joinExprs.expr),
         if (returnNulls) PITOuter else PIT,
-        tolerance
+        tolerance))
+      .analyzed.asInstanceOf[PITJoin]
+
+    withPlan {
+      PITJoin(
+        joined.left, joined.right,
+        joined.leftTSColumn, joined.rightTSColumn,
+        joined.condition,
+        joined.joinType,
+        joined.tolerance
       )
     }
   }
