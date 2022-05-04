@@ -106,6 +106,8 @@ object TreePattern extends Enumeration  {
   val NATURAL_LIKE_JOIN: Value = Value
   val OUTER_JOIN: Value = Value
   val PROJECT: Value = Value
+  val PIT_JOIN: Value = Value
+  val PIT_OUTER_JOIN: Value = Value
   val REPARTITION_OPERATION: Value = Value
   val UNION: Value = Value
   val UNRESOLVED_RELATION: Value = Value

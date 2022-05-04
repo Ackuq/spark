@@ -2270,6 +2270,10 @@ object QueryCompilationErrors {
     new AnalysisException(s"Invalid join type in joinWith: ${joinType.sql}")
   }
 
+  def invalidJoinTypePITWithError(joinType: JoinType): Throwable = {
+    new AnalysisException(s"Invalid join type in PIT join: ${joinType.sql}")
+  }
+
   def cannotPassTypedColumnInUntypedSelectError(typedCol: String): Throwable = {
     new AnalysisException(s"Typed column $typedCol that needs input type and schema " +
       "cannot be passed in untyped `select` API. Use the typed `Dataset.select` API instead.")

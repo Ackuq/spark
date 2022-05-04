@@ -226,6 +226,97 @@ object ExtractEquiJoinKeys extends Logging with PredicateHelper {
 }
 
 /**
+ * Pattern for PIT join to extract equi-join keys. Currently only equi-join is supported.
+ */
+object PITJoinExtractEquality extends Logging with PredicateHelper {
+  private def getEquiJoinKeys(
+                       predicates: Seq[Expression],
+                       left: LogicalPlan,
+                       right: LogicalPlan
+                     ): Seq[(Expression, Expression)] = {
+    predicates.flatMap {
+      case EqualTo(l, r) if l.references.isEmpty || r.references.isEmpty =>
+        None
+      case EqualTo(l, r) if canEvaluate(l, left) && canEvaluate(r, right) =>
+        Some((l, r))
+      case EqualTo(l, r) if canEvaluate(l, right) && canEvaluate(r, left) =>
+        Some((r, l))
+      // Replace null with default value for joining key, then those rows with null in it could
+      // be joined together
+      case EqualNullSafe(l, r)
+        if canEvaluate(l, left) && canEvaluate(r, right) =>
+        Seq(
+          (
+            Coalesce(Seq(l, Literal.default(l.dataType))),
+            Coalesce(Seq(r, Literal.default(r.dataType)))
+          ),
+          (IsNull(l), IsNull(r))
+        )
+      case EqualNullSafe(l, r)
+        if canEvaluate(l, right) && canEvaluate(r, left) =>
+        Seq(
+          (
+            Coalesce(Seq(r, Literal.default(r.dataType))),
+            Coalesce(Seq(l, Literal.default(l.dataType)))
+          ),
+          (IsNull(r), IsNull(l))
+        )
+      case _ => None
+    }
+  }
+
+  /** (joinType, pitLeftKey, pitRightKey, equiLeftKeys, equiRightKeys, condition,
+   * otherPredicates, tolerance, leftChild, rightChild)
+   */
+  type ReturnType = (
+      JoinType,
+      Expression,
+      Expression,
+      Seq[Expression],
+      Seq[Expression],
+      Option[Expression],
+      Long,
+      LogicalPlan,
+      LogicalPlan
+    )
+  def unapply(join: PITJoin): Option[ReturnType] = {
+    logDebug(s"Considering join on: ${join.condition}")
+
+    val predicates =
+      join.condition.map(splitConjunctivePredicates).getOrElse(Nil)
+
+    // First get the equi-join keys, if they exists
+    // These need to be sortable in order to make the algorithm work
+    val equiJoinKeys = getEquiJoinKeys(predicates, join.left, join.right)
+
+    val otherPredicates = predicates.filterNot {
+      case EqualTo(l, r) if l.references.isEmpty || r.references.isEmpty => false
+      case Equality(l, r) =>
+        canEvaluate(l, join.left) && canEvaluate(r, join.right) ||
+          canEvaluate(l, join.right) && canEvaluate(r, join.left)
+      case _ => false
+    }
+
+    val (leftEquiKeys, rightEquiKeys) = equiJoinKeys.unzip
+
+    Some(
+      (
+        join.joinType,
+        join.leftTSColumn,
+        join.rightTSColumn,
+        leftEquiKeys,
+        rightEquiKeys,
+        otherPredicates.reduceOption(And),
+        join.tolerance,
+        join.left,
+        join.right
+      )
+    )
+
+  }
+}
+
+/**
  * A pattern that collects the filter and inner joins.
  *
  *          Filter

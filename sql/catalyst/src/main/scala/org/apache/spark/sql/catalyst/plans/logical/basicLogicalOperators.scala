@@ -505,6 +505,97 @@ case class Join(
     newLeft: LogicalPlan, newRight: LogicalPlan): Join = copy(left = newLeft, right = newRight)
 }
 
+case class PITJoin(
+          left: LogicalPlan,
+          right: LogicalPlan,
+          leftTSColumn: Expression, rightTSColumn: Expression,
+          condition: Option[Expression],
+          joinType: JoinType,
+          tolerance: Long
+) extends BinaryNode with PredicateHelper {
+  override def maxRows: Option[Long] = {
+    if (left.maxRows.isDefined && right.maxRows.isDefined) {
+      val leftMaxRows = BigInt(left.maxRows.get)
+      val rightMaxRows = BigInt(right.maxRows.get)
+      val minRows = joinType match {
+        case PIT => BigInt(0)
+        case PITOuter => leftMaxRows
+        case x => throw QueryCompilationErrors.invalidJoinTypePITWithError(x)
+      }
+      val maxRows = (leftMaxRows * rightMaxRows).max(minRows)
+      if (maxRows.isValidLong) {
+        Some(maxRows.toLong)
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  override def output: Seq[Attribute] = {
+    val rightOutput = joinType match {
+      case PIT => right.output
+      case PITOuter => right.output.map(_.withNullability(true))
+      case x => throw QueryCompilationErrors.invalidJoinTypePITWithError(x)
+    }
+    left.output ++ rightOutput
+  }
+
+  override def metadataOutput: Seq[Attribute] = {
+      children.flatMap(_.metadataOutput)
+  }
+
+  override protected lazy val validConstraints: ExpressionSet = {
+    joinType match {
+      case PIT => left.constraints
+        .union(right.constraints)
+        .union(ExpressionSet(splitConjunctivePredicates(condition.get)))
+      case PITOuter => left.constraints
+      case x => throw QueryCompilationErrors.invalidJoinTypePITWithError(x)
+    }
+  }
+
+  def duplicateResolved: Boolean = left.outputSet.intersect(right.outputSet).isEmpty
+
+  // Joins are only resolved if they don't introduce ambiguous expression ids.
+  // NaturalJoin should be ready for resolution only if everything else is resolved here
+  lazy val resolvedExceptNatural: Boolean = {
+    childrenResolved &&
+      expressions.forall(_.resolved) &&
+      duplicateResolved &&
+      condition.forall(_.dataType == BooleanType)
+  }
+
+  // if not a natural join, use `resolvedExceptNatural`. if it is a natural join or
+  // using join, we still need to eliminate natural or using before we mark it resolved.
+  override lazy val resolved: Boolean = resolvedExceptNatural
+
+  override val nodePatterns : Seq[TreePattern] = {
+    var patterns = Seq(JOIN)
+    joinType match {
+      case PIT => patterns = patterns :+ PIT_JOIN
+      case PITOuter => patterns = patterns :+ PIT_OUTER_JOIN
+      case x => throw QueryCompilationErrors.invalidJoinTypePITWithError(x)
+    }
+    patterns
+  }
+
+  // Ignore hint for canonicalization
+  protected override def doCanonicalize(): LogicalPlan =
+    super.doCanonicalize().asInstanceOf[Join].copy(hint = JoinHint.NONE)
+
+  // Do not include an empty join hint in string description
+  protected override def stringArgs: Iterator[Any] = super.stringArgs.filter { e =>
+    (!e.isInstanceOf[JoinHint]
+      || e.asInstanceOf[JoinHint].leftHint.isDefined
+      || e.asInstanceOf[JoinHint].rightHint.isDefined)
+  }
+
+  override protected def withNewChildrenInternal(
+    newLeft: LogicalPlan, newRight: LogicalPlan): PITJoin = copy(left = newLeft, right = newRight)
+}
+
 /**
  * Insert query result into a directory.
  *

@@ -1022,6 +1022,22 @@ class Dataset[T] private[sql](
   def join(right: Dataset[_], joinExprs: Column): DataFrame = join(right, joinExprs, "inner")
 
   /**
+   * PIT Join
+   */
+  def pitJoin(right: Dataset[_], leftTS: Column, rightTS: Column, joinExprs: Column,
+              returnNulls: Boolean = false, tolerance: Long = 0): DataFrame = {
+    withPlan {
+      PITJoin(
+        logicalPlan, right.logicalPlan,
+        leftTS.expr, rightTS.expr,
+        Some(joinExprs.expr),
+        if (returnNulls) PITOuter else PIT,
+        tolerance
+      )
+    }
+  }
+
+  /**
    * find the trivially true predicates and automatically resolves them to both sides.
    */
   private def resolveSelfJoinCondition(plan: Join): Join = {
@@ -1044,6 +1060,8 @@ class Dataset[T] private[sql](
     }}
     plan.copy(condition = cond)
   }
+
+
 
   /**
    * Join with another `DataFrame`, using the given join expression. The following performs

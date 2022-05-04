@@ -42,6 +42,7 @@ class SparkPlanner(val session: SparkSession, val experimentalMethods: Experimen
       Aggregation ::
       Window ::
       JoinSelection ::
+      PITJoinStrategy ::
       InMemoryScans ::
       SparkScripts ::
       WithCTEStrategy ::

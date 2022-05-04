@@ -34,6 +34,7 @@ import org.apache.spark.sql.execution.aggregate.AggUtils
 import org.apache.spark.sql.execution.columnar.{InMemoryRelation, InMemoryTableScanExec}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.exchange.{REBALANCE_PARTITIONS_BY_COL, REBALANCE_PARTITIONS_BY_NONE, REPARTITION_BY_COL, REPARTITION_BY_NUM, ShuffleExchangeExec}
+import org.apache.spark.sql.execution.joins.PITJoinExec
 import org.apache.spark.sql.execution.python._
 import org.apache.spark.sql.execution.streaming._
 import org.apache.spark.sql.execution.streaming.sources.MemoryPlan
@@ -301,6 +302,45 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
 
 
       // --- Cases where this strategy does not apply ---------------------------------------------
+      case _ => Nil
+    }
+  }
+
+  object PITJoinStrategy extends Strategy {
+    override def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+      case PITJoinExtractEquality(
+      joinType,
+      leftPitKey,
+      rightPitKey,
+      leftEquiKeys,
+      rightEquiKeys,
+      nonEquiCond,
+      tolerance,
+      left,
+      right
+      ) =>
+        if (
+          // TODO: Add ability for non-equi conditions and using no equiality condition
+          nonEquiCond.isEmpty && leftEquiKeys.nonEmpty && RowOrdering.isOrderable(
+            leftEquiKeys
+          ) && RowOrdering.isOrderable(Seq(leftPitKey))
+        ) {
+          Seq(
+            PITJoinExec(
+              joinType,
+              Seq(leftPitKey),
+              Seq(rightPitKey),
+              leftEquiKeys,
+              rightEquiKeys,
+              nonEquiCond,
+              planLater(left),
+              planLater(right),
+              tolerance
+            )
+          )
+        } else {
+          Nil
+        }
       case _ => Nil
     }
   }
