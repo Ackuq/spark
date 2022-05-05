@@ -548,9 +548,10 @@ case class PITJoin(
 
   override protected lazy val validConstraints: ExpressionSet = {
     joinType match {
-      case PIT => left.constraints
+      case PIT if condition.isDefined => left.constraints
         .union(right.constraints)
         .union(ExpressionSet(splitConjunctivePredicates(condition.get)))
+      case PIT => left.constraints.union(right.constraints)
       case PITOuter => left.constraints
       case x => throw QueryCompilationErrors.invalidJoinTypePITWithError(x)
     }

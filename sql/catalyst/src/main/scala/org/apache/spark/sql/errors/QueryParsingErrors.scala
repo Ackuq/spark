@@ -112,6 +112,13 @@ object QueryParsingErrors {
     new ParseException(s"Unsupported LATERAL join type $joinType", ctx)
   }
 
+  def unsupportedPITJoinTypeError(ctx: ParserRuleContext, joinType: String): Throwable = {
+    new ParseException(
+      s"Unsupported PIT join type $joinType, only supported are INNER and LEFT OUTER",
+      ctx
+    )
+  }
+
   def invalidLateralJoinRelationError(ctx: RelationPrimaryContext): Throwable = {
     new ParseException(s"LATERAL can only be used with subquery", ctx)
   }
@@ -134,6 +141,12 @@ object QueryParsingErrors {
 
   def naturalCrossJoinUnsupportedError(ctx: RelationContext): Throwable = {
     new ParseException("NATURAL CROSS JOIN is not supported", ctx)
+  }
+
+  def pitJoinInvalidParameters(ctx: RelationContext, columns: String): Throwable = {
+    new ParseException(
+      s"PIT JOIN requires 2 input columns as first expressions, got: $columns", ctx
+    )
   }
 
   def emptyInputForTableSampleError(ctx: ParserRuleContext): Throwable = {

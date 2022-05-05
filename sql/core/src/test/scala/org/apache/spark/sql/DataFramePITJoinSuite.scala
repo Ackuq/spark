@@ -73,7 +73,7 @@ class DataFramePITJoinSuite extends QueryTest
     )
   }
 
-  test("PIT join - usingColumns, left outer") {
+  test("PIT join - with ID, left outer") {
     val (df1, df2) = prepareForPITJoin()
     checkAnswer(
       df1.pitJoin(df2, df1.col("a"), df2.col("a"), df1("b") === df2("b"),
@@ -92,6 +92,58 @@ class DataFramePITJoinSuite extends QueryTest
       df1.pitJoin(df2, df1.col("a"), df2.col("a"), tolerance = 1),
       Seq(
         Row(1, "x", "a", 1, "v", 1)
+      )
+    )
+  }
+
+  test("PIT join - SQL syntax") {
+    val (df1, df2) = prepareForPITJoin()
+    df1.createOrReplaceTempView("df1")
+    df2.createOrReplaceTempView("df2")
+    checkAnswer(
+      spark.sql("SELECT * FROM df1 JOIN df2 PIT (df1.a, df2.a)"),
+      Seq(
+        Row(1, "x", "a", 1, "v", 1),
+        Row(5, "y", "b", 3, "x", 3),
+        Row(10, "z", "c", 7, "z", 7)
+      )
+    )
+  }
+
+  test("PIT join - SQL syntax with ID") {
+    val (df1, df2) = prepareForPITJoin()
+    df1.createOrReplaceTempView("df1")
+    df2.createOrReplaceTempView("df2")
+    checkAnswer(
+      spark.sql("SELECT * FROM df1 JOIN df2 PIT (df1.a, df2.a) ON df1.b = df2.b"),
+      Seq(
+        Row(10, "z", "c", 7, "z", 7)
+      )
+    )
+  }
+
+  test("PIT join - SQL syntax with tolerance = 1") {
+    val (df1, df2) = prepareForPITJoin()
+    df1.createOrReplaceTempView("df1")
+    df2.createOrReplaceTempView("df2")
+    checkAnswer(
+      spark.sql("SELECT * FROM df1 JOIN df2 PIT (df1.a, df2.a)(1)"),
+      Seq(
+        Row(1, "x", "a", 1, "v", 1)
+      )
+    )
+  }
+
+  test("PIT join - SQL syntax with ID, left outer") {
+    val (df1, df2) = prepareForPITJoin()
+    df1.createOrReplaceTempView("df1")
+    df2.createOrReplaceTempView("df2")
+    checkAnswer(
+      spark.sql("SELECT * FROM df1 LEFT JOIN df2 PIT (df1.a, df2.a) ON df1.b = df2.b"),
+      Seq(
+        Row(1, "x", "a", null, null, null),
+        Row(5, "y", "b", null, null, null),
+        Row(10, "z", "c", 7, "z", 7)
       )
     )
   }

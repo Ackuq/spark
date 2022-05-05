@@ -35,7 +35,7 @@ import org.apache.spark.sql.catalyst.catalog.{BucketSpec, CatalogStorageFormat, 
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{First, Last}
 import org.apache.spark.sql.catalyst.parser.SqlBaseParser._
-import org.apache.spark.sql.catalyst.plans._
+import org.apache.spark.sql.catalyst.plans.{PIT => PITJT, _}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.trees.CurrentOrigin
 import org.apache.spark.sql.catalyst.util.{CharVarcharUtils, DateTimeUtils, IntervalUtils}
@@ -1139,6 +1139,20 @@ class AstBuilder extends SqlBaseBaseVisitor[AnyRef] with SQLConfHelper with Logg
 
         // Resolve the join type and join condition
         val (joinType, condition) = Option(join.joinCriteria) match {
+          case Some(c) if c.PIT != null =>
+            if (!Seq(Inner, LeftOuter).contains(baseJoinType)) {
+              throw QueryParsingErrors.unsupportedPITJoinTypeError(ctx, baseJoinType.toString)
+            }
+            val condition = if (c.booleanExpression == null) {
+              None
+            } else {
+              Option(expression(c.booleanExpression))
+            }
+            val joinType = baseJoinType match {
+              case LeftOuter => PITOuter
+              case _ => PITJT
+            }
+            (joinType, condition)
           case Some(c) if c.USING != null =>
             if (join.LATERAL != null) {
               throw QueryParsingErrors.lateralJoinWithUsingJoinUnsupportedError(ctx)
@@ -1159,13 +1173,35 @@ class AstBuilder extends SqlBaseBaseVisitor[AnyRef] with SQLConfHelper with Logg
           case None =>
             (baseJoinType, None)
         }
-        if (join.LATERAL != null) {
-          if (!Seq(Inner, Cross, LeftOuter).contains(joinType)) {
-            throw QueryParsingErrors.unsupportedLateralJoinTypeError(ctx, joinType.toString)
-          }
-          LateralJoin(left, LateralSubquery(plan(join.right)), joinType, condition)
-        } else {
-          Join(left, plan(join.right), joinType, condition, JoinHint.NONE)
+
+        joinType match {
+          case PITJT | PITOuter =>
+            val columns = visitExpressionSeq(join.joinCriteria().expressionSeq())
+            if (columns.length < 2) {
+              throw QueryParsingErrors.pitJoinInvalidParameters(ctx, columns.toString())
+            }
+            val toleranceLiteral = join.joinCriteria().number
+            val tolerance = if (toleranceLiteral == null) {
+              0
+            } else {
+              join.joinCriteria().number.getText.toLong
+            }
+            PITJoin(
+              left, plan(join.right),
+              columns.head, columns(1),
+              condition,
+              joinType,
+              tolerance
+            )
+          case _ =>
+            if (join.LATERAL != null) {
+              if (!Seq(Inner, Cross, LeftOuter).contains(joinType)) {
+                throw QueryParsingErrors.unsupportedLateralJoinTypeError(ctx, joinType.toString)
+              }
+              LateralJoin(left, LateralSubquery(plan(join.right)), joinType, condition)
+            } else {
+              Join(left, plan(join.right), joinType, condition, JoinHint.NONE)
+            }
         }
       }
     }

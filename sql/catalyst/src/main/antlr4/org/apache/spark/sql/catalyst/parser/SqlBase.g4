@@ -679,6 +679,7 @@ joinType
 joinCriteria
     : ON booleanExpression
     | USING identifierList
+    | PIT '(' expressionSeq ')' ('(' number ')')? (ON booleanExpression)?
     ;
 
 sample
@@ -1273,6 +1274,7 @@ strictNonReserved
     | LEFT
     | NATURAL
     | ON
+    | PIT
     | RIGHT
     | SEMI
     | SETMINUS
@@ -1697,6 +1699,7 @@ PARTITION: 'PARTITION';
 PARTITIONED: 'PARTITIONED';
 PARTITIONS: 'PARTITIONS';
 PERCENTLIT: 'PERCENT';
+PIT: 'PIT';
 PIVOT: 'PIVOT';
 PLACING: 'PLACING';
 POSITION: 'POSITION';
