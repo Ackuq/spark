@@ -74,7 +74,7 @@ case class PITJoinExec(
 
   override def requiredChildDistribution: Seq[Distribution] = {
     if (leftEquiKeys.isEmpty || rightEquiKeys.isEmpty) {
-      UnspecifiedDistribution :: UnspecifiedDistribution :: Nil
+      AllTuples :: AllTuples :: Nil
     } else {
       HashClusteredDistribution(leftEquiKeys) :: HashClusteredDistribution(
         rightEquiKeys
