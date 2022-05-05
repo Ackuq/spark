@@ -479,6 +479,69 @@ class DataFrameTests(ReusedSQLTestCase):
         df2 = self.spark.createDataFrame([("Alice", 80), ("Bob", 90)], ["name", "height"])
         self.assertRaises(IllegalArgumentException, lambda: df1.join(df2, how="invalid-join-type"))
 
+    def test_pit_join(self):
+        schema1 = StructType([
+            StructField("a", IntegerType(), nullable=False),
+            StructField("b", StringType(), nullable=False),
+            StructField("left_val", StringType(), nullable=False),
+        ])
+        rows1 = [(1, "x", "a"), (5, "y", "b"), (10, "z", "c")]
+        df1 = self.spark.createDataFrame(rows1, schema1)
+        schema2 = StructType([
+            StructField("a", IntegerType(), nullable=False),
+            StructField("b", StringType(), nullable=False),
+            StructField("right_val", IntegerType(), nullable=False),
+        ])
+
+        rows2 = [(1, "v", 1), (2, "w", 2), (3, "x", 3), (6, "y", 6), (7, "z", 7)]
+        df2 = self.spark.createDataFrame(rows2, schema2)
+
+        df1.createOrReplaceTempView("df1")
+        df2.createOrReplaceTempView("df2")
+        # Simple PIT
+        pit = df1.pitJoin(df2, df1["a"], df2["a"])
+        expected = self.spark.createDataFrame([
+            (10, "z", "c", 7, "z", 7),
+            (5, "y", "b", 3, "x", 3), 
+            (1, "x", "a", 1, "v", 1),
+        ], pit.schema)
+        self.assertEqual(pit.collect(), expected.collect())
+        # SQL Syntax
+        pit = self.spark.sql("SELECT * FROM df1 JOIN df2 PIT (df1.a, df2.a)")
+        self.assertEqual(pit.collect(), expected.collect())
+        
+        # With ID
+        pit = df1.pitJoin(df2, df1["a"], df2["a"], df1["b"] == df2["b"])
+        expected = self.spark.createDataFrame([
+            (10, "z", "c", 7, "z", 7),
+        ], pit.schema)
+        self.assertEqual(pit.collect(), expected.collect())
+        # SQL Syntax
+        pit = self.spark.sql("SELECT * FROM df1 JOIN df2 PIT (df1.a, df2.a) ON df1.b = df2.b")
+        self.assertEqual(pit.collect(), expected.collect())
+
+        # With ID, left outer
+        pit = df1.pitJoin(df2, df1["a"], df2["a"], df1["b"] == df2["b"], returnNulls = True)
+        expected = self.spark.createDataFrame([
+            (10, "z", "c", 7, "z", 7),
+            (5, "y", "b", None, None, None), 
+            (1, "x", "a", None, None, None),
+        ])
+        self.assertEqual(pit.collect(), expected.collect())
+        # SQL Syntax
+        pit = self.spark.sql("SELECT * FROM df1 LEFT JOIN df2 PIT (df1.a, df2.a) ON df1.b = df2.b")
+        self.assertEqual(pit.collect(), expected.collect())
+
+        # Tolerance = 1
+        pit = df1.pitJoin(df2, df1["a"], df2["a"], tolerance = 1)
+        expected = self.spark.createDataFrame([
+            (1, "x", "a", 1, "v", 1),
+        ], pit.schema)
+        self.assertEqual(pit.collect(), expected.collect())
+        pit = self.spark.sql("SELECT * FROM df1 JOIN df2 PIT (df1.a, df2.a)(1)")
+        self.assertEqual(pit.collect(), expected.collect())
+
+
     # Cartesian products require cross join syntax
     def test_require_cross(self):
 

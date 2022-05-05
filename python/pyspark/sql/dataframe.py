@@ -1355,6 +1355,56 @@ class DataFrame(PandasMapOpsMixin, PandasConversionMixin):
             jdf = self._jdf.join(other._jdf, on, how)
         return DataFrame(jdf, self.sql_ctx)
 
+    def pitJoin(self, other, leftPITColumn, rightPITColumns, condition = None, returnNulls = False, tolerance = 0):
+        """Makes a PIT join with another dataframe
+
+        Parameters
+        ----------
+        other : :class:`DataFrame`
+            Right side of the join
+        leftPITColumn : str or :class:`Column`
+            a string for the as-of join column name, or a Column
+        rightPITColumn : str or :class:`Column`
+            a string for the as-of join column name, or a Column
+        condition : str, list or :class:`Column`, optional
+            a string for the join column name, a list of column names,
+            a join expression (Column), or a list of Columns.
+            If `on` is a string or a list of strings indicating the name of the join column(s),
+            the column(s) must exist on both sides, and this performs an equi-join.
+        returnNulls : boolean, optional
+            whether or not to perform a left outer join.
+        tolerance : int, optional
+            the maximum time difference between two matches.
+        """
+        if isinstance(leftPITColumn, str):
+            leftPITColumn = self[leftPITColumn]
+        left_pit_column_j = leftPITColumn._jc
+        if isinstance(rightPITColumns, str):
+            rightPITColumns = other[rightPITColumns]
+        right_pit_column_j = rightPITColumns._jc
+
+        if condition is not None and not isinstance(condition, list):
+             condition = [condition]
+
+        if condition is not None:
+            if isinstance(condition[0], str):
+                condition = self._jseq(condition)
+            else:
+                assert isinstance(condition[0], Column), "on should be Column or list of Column"
+                condition = reduce(lambda x, y: x.__and__(y), condition)
+                condition = condition._jc
+
+
+        jdf = self._jdf.pitJoin(
+            other._jdf,
+            left_pit_column_j, right_pit_column_j,
+            condition,
+            returnNulls,
+            tolerance
+        )
+        return DataFrame(jdf, self.sql_ctx)
+
+
     def sortWithinPartitions(self, *cols, **kwargs):
         """Returns a new :class:`DataFrame` with each partition sorted by the specified column(s).
 
